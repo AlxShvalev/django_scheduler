@@ -1,0 +1,45 @@
+services:
+  back:
+    build: ./file_scheduler
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./file_scheduler:/app
+      - ${FILES_LOCATION}:/app/data/
+    ports:
+      - ${PORT}:8000
+    env_file:
+      - .env
+    depends_on:
+      - redis
+
+  celery:
+    build: ./file_scheduler
+    command: celery --app=file_scheduler worker --loglevel=info
+    volumes:
+      - ./file_scheduler:/app
+      - ${FILES_LOCATION}:/app/data/
+
+    env_file:
+      - .env
+    depends_on:
+      - back
+      - redis
+
+  celery-beat:
+    build: ./file_scheduler
+    command: celery --app=file_scheduler beat --loglevel=info
+    volumes:
+      - ./file_scheduler:/app
+      - ${FILES_LOCATION}:/app/data/
+    env_file:
+      - .env
+    depends_on:
+      - back
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - ${REDIS_PORT}:6379
+    environment:
+      - TZ=Asia/Yekaterinburg
